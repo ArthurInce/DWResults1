@@ -1,9 +1,12 @@
 
 
+
+
 ## canoe marathon results app
 
 #-----------LIBRARY LOADING---------------
 
+library(stringr)
 library(shiny)
 library(shinythemes)
 library(tidyverse) # group of packages for data wrangling and visualisation (ggplot2)
@@ -40,6 +43,16 @@ regions <- main_data %>%
 divs <- main_data %>% 
   select(Military) %>% 
   arrange(Military) %>% 
+  unique()
+
+divssc <- main_data %>% 
+  select(SubClass) %>% 
+  arrange(SubClass) %>% 
+  unique()
+
+divsclass <- main_data %>% 
+  select(Class) %>% 
+  arrange(Class) %>% 
   unique()
 
 top3s <- main_data %>% 
@@ -97,6 +110,8 @@ clubdata <- readRDS("CanoeingClubPts.rds") %>%
   mutate(Total = sum(`Hasler points`)) %>% 
   ungroup() %>% 
   arrange(Region)
+
+data_sets <- c("Army","Canadian","Century","Civilian","European","Ladies","Ladies C2","Mixed","Navy","Over 50","Overseas","Police","RAF","Reserve","Scouts","Services","Tyne","U17 School","University","Vet Ladies","Veteran")
 
 
 
@@ -163,7 +178,7 @@ ui <- fluidPage(
     tabPanel("Paddler History", 
              fluidRow(
                column(7, tags$h3(textOutput("paddlername"), tags$h5("Please note, paddlers may appear as duplicates in this system if they have raced for multiple clubs or if their names were entered incorrectly at races"))),
-               column(5,selectInput("paddler", "Choose Paddler: (hit backspace to clear and type in a name)", c(unique(paddlers$Name2)), selected = "INCE", multiple = FALSE))
+               column(5,textInput("paddler", "Choose Paddler: (hit backspace to clear and type in a name)", value = ""))
              ),
              
              fluidRow(column(3, tags$h3("Positions"), tags$h4(textOutput("top3s")), tags$h4(textOutput("medals"))),
@@ -171,14 +186,26 @@ ui <- fluidPage(
              )
     ),
     
-    tabPanel("Race Attendance", 
+    
+    tabPanel("Military Attendance", 
              fluidRow(
-               column(6, tags$h3("Race Attendance")),
+               column(6, tags$h3("Military Attendance")),
                column(3,selectInput("attdiv", "Choose one or more Arms", c(unique(divs$Military)), selected = "Civilian", multiple = TRUE)),
                column(3,selectInput("region", "Choose Boat Type:", c(unique(regions$BoatType)), selected = "MID", multiple = FALSE)),
                column(6,selectInput("attyear","Pick one or more Years",c(unique(menus$Year)),selected = "2017",multiple = TRUE))
              ),
-             fluidRow(column(12, plotOutput("attendance"))
+             fluidRow(column(12, plotOutput("Mattendance"))
+             )
+    ),
+    
+    tabPanel("SubClass Attendance", 
+             fluidRow(
+               column(6, tags$h3("Subclass Attendance")),
+               column(3,selectInput("attclass", "Choose one or more Classes", c(unique(divsclass$Class)), selected = "Senior", multiple = TRUE)),
+               column(3,selectInput("attSC", "Choose one or more SubClasses", as.list(data_sets), selected = "Civilian", multiple = TRUE)),
+               column(6,selectInput("attyear","Pick one or more Years",c(unique(menus$Year)),selected = "2017",multiple = TRUE))
+             ),
+             fluidRow(column(12, plotOutput("SCattendance"))
              )
     )
   )
@@ -274,7 +301,8 @@ server <- function(input, output, session) {
     
     racechartdata <- main_data %>% 
       select(Year, Name2) %>% 
-      filter(Name2 == input$paddler)
+      filter(Name2 %like% input$paddler)
+    
     
     ggplot(racechartdata, aes(Year))+
       geom_histogram(aes(fill = Year), stat = "count")+
@@ -285,11 +313,11 @@ server <- function(input, output, session) {
   output$positions <- renderPlot({
     
     poschartdata <- main_data %>% 
-      select(Year, Position, Military, Name2) %>% 
-      filter(Name2 == input$paddler)
+      select(Year, Position, Class, Name2) %>% 
+      filter(str_detect(Name2, input$paddler))
     
     ggplot(poschartdata)+
-      geom_point(aes(Year, Position, color = Military), position=position_jitter(width=0.1, height=0.1), size = 5)+
+      geom_point(aes(Year, Position, color = Class), position=position_jitter(width=0.1, height=0.1), size = 5)+
       scale_y_continuous(trans = "reverse", breaks = unique(main_data$Position)) 
     
   })
@@ -308,7 +336,7 @@ server <- function(input, output, session) {
     
   })
   
-  output$attendance <- renderPlot({
+  output$Mattendance <- renderPlot({
     
     attchartdata <- main_data %>% 
       select(BoatType, Ladies, Year, Military) %>% 
@@ -320,15 +348,20 @@ server <- function(input, output, session) {
       coord_flip()+
       facet_wrap(~Year)
     
+    
+  })
   
+  output$SCattendance <- renderPlot({
+    
+    attchartdata <- main_data %>% 
+      select(BoatType, Ladies, Year, Class, SubClass) %>% 
+      filter(SubClass == input$divssc, Year == input$attyear, SubClass %in% input$attSC)
     
     
-    
-    
-    
-    
-    
-    
+    ggplot(attchartdata, aes(Class))+
+      geom_bar(aes(fill = SubClass), stat = "count")+
+      coord_flip()+
+      facet_wrap(~Year)
     
     
   })
