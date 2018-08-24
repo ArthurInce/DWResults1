@@ -1,0 +1,2 @@
+"Army","Canadian","Century","Civilian","European","Ladies","Ladies C2","Mixed","Navy","Over 50","Overseas","Police","RAF","Reserve","Scouts","Services","Tyne","U17 School","University","Vet Ladies","Veteran"
+"Century","European","Over 50","Overseas","Police","Reserve","Scouts","U17 School","University","Veteran"
